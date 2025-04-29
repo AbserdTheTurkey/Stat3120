@@ -167,15 +167,3 @@ proc freq data=project.finstats_chi;
    tables ExpCatLabel * CompCatLabel /
           chisq expected cellchi2 norow nocol nopercent;
 quit;
-
-data project.finstats_chi2;
-   set project.finstats_chi;
-   length Exp2 Comp2 $4;
-   Exp2  = ifn(ExpCat = 0, 'LOW', 'HIGH');
-   Comp2 = ifn(CompCat = 0, 'LOW', 'HIGH');
-run;
-
-proc freq data=project.finstats_chi2;
-   tables Exp2 * Comp2 /
-          chisq expected cellchi2 norow nocol nopercent;
-quit;
