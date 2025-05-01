@@ -96,6 +96,11 @@ data project.finstats;
 proc means data = project.finstats
     NMISS missing;
 run;
+proc univariate data = project.finstats cibasic (alpha=.05) normal plot;
+var HumanCapitalIndex
+	GovEdExpendPerGDP
+	GovEdExpendPerTotal;
+run;
 PROC CORR data= project.finstats pearson plots(maxpoints=10000000)= matrix(histogram);
 	var
 	HumanCapitalIndex
@@ -104,11 +109,6 @@ PROC CORR data= project.finstats pearson plots(maxpoints=10000000)= matrix(histo
 	;	
 	title 'Correlation Matrix of Raw Data';
 	RUN;
- proc univariate data = project.finstats cibasic (alpha=.05) normal plot;
-var HumanCapitalIndex
-	GovEdExpendPerGDP
-	GovEdExpendPerTotal;
-run;
 PROC REG data= project.finstats;
 model HumanCapitalIndex = 
 	GovEdExpendPerGDP
@@ -123,14 +123,14 @@ run;
 proc means data = stdres;
 var resids;
 run;
-
-*Isaac's Code;
+*Chi Code;
 proc sql;
    create table project.finstats_chi as
    select GovEdExpendPerGDP ,
           CompletionRateUpperSec
-   from   project.goodstatsT
-;quit;
+   from   project.finstats;
+quit;
+
 
 proc rank data = project.finstats_chi
           out  = project.finstats_chi
@@ -138,9 +138,9 @@ proc rank data = project.finstats_chi
           ties   = low;
    var   GovEdExpendPerGDP
          CompletionRateUpperSec;
-   ranks ExpCat               /* 0 LOW … 2 HIGH */
+   ranks ExpCat               /* 0 = LOW, 1 = MED, 2 = HIGH   */
          CompCat;
-;quit;
+quit;
 
 data project.finstats_chi;
     set project.finstats_chi;
@@ -148,24 +148,40 @@ data project.finstats_chi;
 
     if ExpCat = 0 then ExpCatLabel = 'LOW';
     else if ExpCat = 1 then ExpCatLabel = 'MED';
-    else ExpCatLabel = 'HIGH';
+    else                 ExpCatLabel = 'HIGH';
 
     if CompCat = 0 then CompCatLabel = 'LOW';
     else if CompCat = 1 then CompCatLabel = 'MED';
-    else CompCatLabel = 'HIGH';
+    else                 CompCatLabel = 'HIGH';
 run;
+
+
+proc format;
+   value ExpFmt  0 = 'LOW'
+                 1 = 'MED'
+                 2 = 'HIGH';
+run;
+
+
+proc sort data=project.finstats_chi; by ExpCat; run;
 
 
 title;
 proc sgplot data=project.finstats_chi;
-   vbar ExpCatLabel / group=CompCatLabel groupdisplay=cluster;
+   vbar ExpCatLabel /
+        group           = CompCatLabel
+        groupdisplay    = cluster;
+   xaxis discreteorder=data;        
 quit;
 title;
 
-proc freq data=project.finstats_chi;
-   tables ExpCatLabel * CompCatLabel /
+
+proc freq data = project.finstats_chi order=internal;
+   tables ExpCat * CompCat /
           chisq expected cellchi2 norow nocol nopercent;
-quit;
+   format ExpCat  ExpFmt.
+          CompCat ExpFmt.;
+run;
 
 data project.finstats_chi2;
    set project.finstats_chi;
@@ -177,4 +193,25 @@ run;
 proc freq data=project.finstats_chi2;
    tables Exp2 * Comp2 /
           chisq expected cellchi2 norow nocol nopercent;
+run;
+
+proc freq data=project.finstats_chi2;
+
+
+
+proc freq data=project.finstats_chi order=internal;
+   tables ExpCat * CompCat /
+          chisq expected cellchi2 norow nocol nopercent;
+   format ExpCat  ExpFmt.     /* ExpFmt was created earlier: 0=LOW 1=MED 2=HIGH */
+          CompCat ExpFmt.;
 quit;
+
+proc univariate data=project.finstats
+    var CompletionRateUpperSec;
+    output out=StatsSummary
+        mean=Mean
+        median=Median
+        std=StdDev
+        skewness=Skewness
+        kurtosis=Kurtosis;
+run;
