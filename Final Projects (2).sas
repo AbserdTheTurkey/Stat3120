@@ -104,7 +104,7 @@ PROC CORR data= project.finstats pearson plots(maxpoints=10000000)= matrix(histo
 	;	
 	title 'Correlation Matrix of Raw Data';
 	RUN;
-proc univariate data = stdres cibasic (alpha=.05) normal plot;
+ proc univariate data = project.finstats cibasic (alpha=.05) normal plot;
 var HumanCapitalIndex
 	GovEdExpendPerGDP
 	GovEdExpendPerTotal;
